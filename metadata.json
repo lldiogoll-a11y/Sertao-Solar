@@ -1,0 +1,8 @@
+{
+  "name": "Sertao Solar — Gestão de Mini Usina Solar",
+  "description": "Plataforma completa para monitoramento de geração solar em tempo real, gestão de plantas, clientes, faturas, comissões de vendedores e relatórios em PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,310 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user account workspace profile.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "createdAt", "updatedAt"]
+    },
+    "SolarPlant": {
+      "title": "SolarPlant",
+      "description": "Mini solar power plant owned by the authenticated user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "code": { "type": "string", "maxLength": 40 },
+        "name": { "type": "string", "maxLength": 160 },
+        "ucNumber": { "type": "string", "maxLength": 60 },
+        "city": { "type": "string", "maxLength": 120 },
+        "state": { "type": "string", "maxLength": 10 },
+        "capacityKwp": { "type": "number" },
+        "inverterModel": { "type": "string", "maxLength": 120 },
+        "inverterCount": { "type": "number" },
+        "panelCount": { "type": "number" },
+        "tariffPerKwh": { "type": "number" },
+        "commissionedAt": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["operacional", "manutencao", "alerta"] },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "monthlyTargetKwh": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "code",
+        "name",
+        "ucNumber",
+        "city",
+        "state",
+        "capacityKwp",
+        "inverterModel",
+        "inverterCount",
+        "panelCount",
+        "tariffPerKwh",
+        "commissionedAt",
+        "status",
+        "imageUrl",
+        "monthlyTargetKwh",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Seller": {
+      "title": "Seller",
+      "description": "Sales representative / consultant linked to the authenticated user workspace.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 160 },
+        "document": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "region": { "type": "string", "maxLength": 120 },
+        "defaultCommissionPct": { "type": "number" },
+        "pixKey": { "type": "string", "maxLength": 160 },
+        "joinedAt": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["ativo", "inativo"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "name",
+        "document",
+        "email",
+        "phone",
+        "region",
+        "defaultCommissionPct",
+        "pixKey",
+        "joinedAt",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Solar energy compensation client owned by the authenticated user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 200 },
+        "document": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "city": { "type": "string", "maxLength": 120 },
+        "ucNumber": { "type": "string", "maxLength": 60 },
+        "plantId": { "type": "string", "maxLength": 128 },
+        "contractedKwh": { "type": "number" },
+        "discountPct": { "type": "number" },
+        "fixedDiscountBrl": { "type": "number" },
+        "sellerId": { "type": "string", "maxLength": 128 },
+        "commissionPct": { "type": "number" },
+        "contractStartDate": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["ativo", "suspenso"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "name",
+        "document",
+        "email",
+        "phone",
+        "city",
+        "ucNumber",
+        "plantId",
+        "contractedKwh",
+        "discountPct",
+        "sellerId",
+        "commissionPct",
+        "contractStartDate",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ConsumptionRecord": {
+      "title": "ConsumptionRecord",
+      "description": "Monthly electricity consumption and solar compensation record for a client.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clientId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "month": { "type": "string", "maxLength": 10, "pattern": "^\\d{4}-\\d{2}$" },
+        "consumedKwh": { "type": "number" },
+        "compensatedKwh": { "type": "number" },
+        "gridCostWithoutSolar": { "type": "number" },
+        "billedAmount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "clientId",
+        "month",
+        "consumedKwh",
+        "compensatedKwh",
+        "gridCostWithoutSolar",
+        "billedAmount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Client billing invoice and payment receipt metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "number": { "type": "string", "maxLength": 60 },
+        "clientId": { "type": "string", "maxLength": 128 },
+        "plantId": { "type": "string", "maxLength": 128 },
+        "sellerId": { "type": "string", "maxLength": 128 },
+        "commissionPctSnapshot": { "type": "number" },
+        "referenceMonth": { "type": "string", "maxLength": 10, "pattern": "^\\d{4}-\\d{2}$" },
+        "issueDate": { "type": "string", "maxLength": 20 },
+        "dueDate": { "type": "string", "maxLength": 20 },
+        "kwhCompensated": { "type": "number" },
+        "grossAmount": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "netAmount": { "type": "number" },
+        "commissionAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["paga", "pendente", "vencida"] },
+        "paidAt": { "type": "string", "maxLength": 20 },
+        "paymentMethod": { "type": "string", "enum": ["PIX", "Boleto", "Transferência", "Cartão"] },
+        "receiptNumber": { "type": "string", "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "number",
+        "clientId",
+        "plantId",
+        "sellerId",
+        "commissionPctSnapshot",
+        "referenceMonth",
+        "issueDate",
+        "dueDate",
+        "kwhCompensated",
+        "grossAmount",
+        "discountAmount",
+        "netAmount",
+        "commissionAmount",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MonthlyPerformanceRecord": {
+      "title": "MonthlyPerformanceRecord",
+      "description": "Monthly solar plant generation, performance, and expense metrics.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "month": { "type": "string", "maxLength": 10, "pattern": "^\\d{4}-\\d{2}$" },
+        "plantId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "generatedKwh": { "type": "number" },
+        "expectedKwh": { "type": "number" },
+        "compensatedKwh": { "type": "number" },
+        "performanceRatioPct": { "type": "number" },
+        "availabilityPct": { "type": "number" },
+        "co2AvoidedTons": { "type": "number" },
+        "maintenanceExpense": { "type": "number" },
+        "utilityExpense": { "type": "number" },
+        "leaseExpense": { "type": "number" },
+        "otherExpenses": { "type": "number" },
+        "totalExpenses": { "type": "number" },
+        "expenseNotes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "month",
+        "plantId",
+        "generatedKwh",
+        "expectedKwh",
+        "compensatedKwh",
+        "performanceRatioPct",
+        "availabilityPct",
+        "co2AvoidedTons",
+        "maintenanceExpense",
+        "utilityExpense",
+        "leaseExpense",
+        "otherExpenses",
+        "totalExpenses",
+        "expenseNotes",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User workspace profile isolated per authenticated Google account."
+    },
+    "/users/{userId}/plants/{plantId}": {
+      "schema": { "$ref": "#/entities/SolarPlant" },
+      "description": "Solar plants belonging exclusively to the authenticated user."
+    },
+    "/users/{userId}/sellers/{sellerId}": {
+      "schema": { "$ref": "#/entities/Seller" },
+      "description": "Sellers belonging exclusively to the authenticated user."
+    },
+    "/users/{userId}/clients/{clientId}": {
+      "schema": { "$ref": "#/entities/Client" },
+      "description": "Clients belonging exclusively to the authenticated user."
+    },
+    "/users/{userId}/consumptions/{consumptionId}": {
+      "schema": { "$ref": "#/entities/ConsumptionRecord" },
+      "description": "Monthly consumption records belonging exclusively to the authenticated user."
+    },
+    "/users/{userId}/invoices/{invoiceId}": {
+      "schema": { "$ref": "#/entities/Invoice" },
+      "description": "Invoices belonging exclusively to the authenticated user."
+    },
+    "/users/{userId}/monthlyPerformance/{recordId}": {
+      "schema": { "$ref": "#/entities/MonthlyPerformanceRecord" },
+      "description": "Monthly plant generation records belonging exclusively to the authenticated user."
+    }
+  }
+}

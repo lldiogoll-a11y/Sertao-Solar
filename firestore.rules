@@ -1,0 +1,427 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Reusable Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidOptionalId(id) {
+      return id is string && (id == '' || isValidId(id));
+    }
+
+    function isValidMonth(m) {
+      return m is string && m.size() == 7 && m.matches('^\\d{4}-\\d{2}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == userId && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && data.displayName is string && data.displayName.size() <= 200
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPlant(data, plantId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'code', 'name', 'ucNumber', 'city', 'state',
+          'capacityKwp', 'inverterModel', 'inverterCount', 'panelCount',
+          'tariffPerKwh', 'commissionedAt', 'status', 'imageUrl',
+          'monthlyTargetKwh', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'code', 'name', 'ucNumber', 'city', 'state',
+          'capacityKwp', 'inverterModel', 'inverterCount', 'panelCount',
+          'tariffPerKwh', 'commissionedAt', 'status', 'imageUrl',
+          'monthlyTargetKwh', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == plantId
+        && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.code is string && data.code.size() <= 40
+        && data.name is string && data.name.size() <= 160
+        && data.ucNumber is string && data.ucNumber.size() <= 60
+        && data.city is string && data.city.size() <= 120
+        && data.state is string && data.state.size() <= 10
+        && data.capacityKwp is number && data.capacityKwp >= 0
+        && data.inverterModel is string && data.inverterModel.size() <= 120
+        && data.inverterCount is number && data.inverterCount >= 0
+        && data.panelCount is number && data.panelCount >= 0
+        && data.tariffPerKwh is number && data.tariffPerKwh >= 0
+        && data.commissionedAt is string && data.commissionedAt.size() <= 20
+        && data.status in ['operacional', 'manutencao', 'alerta']
+        && data.imageUrl is string && data.imageUrl.size() <= 500
+        && data.monthlyTargetKwh is number && data.monthlyTargetKwh >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSeller(data, sellerId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'name', 'document', 'email', 'phone', 'region',
+          'defaultCommissionPct', 'pixKey', 'joinedAt', 'status',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'document', 'email', 'phone', 'region',
+          'defaultCommissionPct', 'pixKey', 'joinedAt', 'status',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == sellerId
+        && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.name is string && data.name.size() <= 160
+        && data.document is string && data.document.size() <= 40
+        && data.email is string && data.email.size() <= 256
+        && data.phone is string && data.phone.size() <= 40
+        && data.region is string && data.region.size() <= 120
+        && data.defaultCommissionPct is number && data.defaultCommissionPct >= 0 && data.defaultCommissionPct <= 100
+        && data.pixKey is string && data.pixKey.size() <= 160
+        && data.joinedAt is string && data.joinedAt.size() <= 20
+        && data.status in ['ativo', 'inativo']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidClient(data, clientId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'name', 'document', 'email', 'phone', 'city',
+          'ucNumber', 'plantId', 'contractedKwh', 'discountPct', 'sellerId',
+          'commissionPct', 'contractStartDate', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'document', 'email', 'phone', 'city',
+          'ucNumber', 'plantId', 'contractedKwh', 'discountPct', 'fixedDiscountBrl',
+          'sellerId', 'commissionPct', 'contractStartDate', 'status',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == clientId
+        && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.name is string && data.name.size() <= 200
+        && data.document is string && data.document.size() <= 40
+        && data.email is string && data.email.size() <= 256
+        && data.phone is string && data.phone.size() <= 40
+        && data.city is string && data.city.size() <= 120
+        && data.ucNumber is string && data.ucNumber.size() <= 60
+        && isValidOptionalId(data.plantId)
+        && data.contractedKwh is number && data.contractedKwh >= 0
+        && data.discountPct is number && data.discountPct >= 0 && data.discountPct <= 100
+        && (!('fixedDiscountBrl' in data) || (data.fixedDiscountBrl is number && data.fixedDiscountBrl >= 0))
+        && isValidOptionalId(data.sellerId)
+        && data.commissionPct is number && data.commissionPct >= 0 && data.commissionPct <= 100
+        && data.contractStartDate is string && data.contractStartDate.size() <= 20
+        && data.status in ['ativo', 'suspenso']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidConsumption(data, consumptionId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'clientId', 'month', 'consumedKwh',
+          'compensatedKwh', 'gridCostWithoutSolar', 'billedAmount',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'clientId', 'month', 'consumedKwh',
+          'compensatedKwh', 'gridCostWithoutSolar', 'billedAmount',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == consumptionId
+        && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && isValidId(data.clientId)
+        && isValidMonth(data.month)
+        && data.consumedKwh is number && data.consumedKwh >= 0
+        && data.compensatedKwh is number && data.compensatedKwh >= 0
+        && data.gridCostWithoutSolar is number && data.gridCostWithoutSolar >= 0
+        && data.billedAmount is number && data.billedAmount >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidInvoice(data, invoiceId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'number', 'clientId', 'plantId', 'sellerId',
+          'commissionPctSnapshot', 'referenceMonth', 'issueDate', 'dueDate',
+          'kwhCompensated', 'grossAmount', 'discountAmount', 'netAmount',
+          'commissionAmount', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'number', 'clientId', 'plantId', 'sellerId',
+          'commissionPctSnapshot', 'referenceMonth', 'issueDate', 'dueDate',
+          'kwhCompensated', 'grossAmount', 'discountAmount', 'netAmount',
+          'commissionAmount', 'status', 'paidAt', 'paymentMethod', 'receiptNumber',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == invoiceId
+        && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.number is string && data.number.size() <= 60
+        && isValidOptionalId(data.clientId)
+        && isValidOptionalId(data.plantId)
+        && isValidOptionalId(data.sellerId)
+        && data.commissionPctSnapshot is number && data.commissionPctSnapshot >= 0 && data.commissionPctSnapshot <= 100
+        && isValidMonth(data.referenceMonth)
+        && data.issueDate is string && data.issueDate.size() <= 20
+        && data.dueDate is string && data.dueDate.size() <= 20
+        && data.kwhCompensated is number && data.kwhCompensated >= 0
+        && data.grossAmount is number && data.grossAmount >= 0
+        && data.discountAmount is number && data.discountAmount >= 0
+        && data.netAmount is number && data.netAmount >= 0
+        && data.commissionAmount is number && data.commissionAmount >= 0
+        && data.status in ['paga', 'pendente', 'vencida']
+        && (!('paidAt' in data) || (data.paidAt is string && data.paidAt.size() <= 20))
+        && (!('paymentMethod' in data) || (data.paymentMethod in ['PIX', 'Boleto', 'Transferência', 'Cartão']))
+        && (!('receiptNumber' in data) || (data.receiptNumber is string && data.receiptNumber.size() <= 60))
+        && (data.status != 'paga' || ('paidAt' in data && 'paymentMethod' in data && 'receiptNumber' in data))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMonthlyPerformance(data, recordId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'month', 'plantId', 'generatedKwh', 'expectedKwh',
+          'compensatedKwh', 'performanceRatioPct', 'availabilityPct',
+          'co2AvoidedTons', 'maintenanceExpense', 'utilityExpense',
+          'leaseExpense', 'otherExpenses', 'totalExpenses', 'expenseNotes',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'month', 'plantId', 'generatedKwh', 'expectedKwh',
+          'compensatedKwh', 'performanceRatioPct', 'availabilityPct',
+          'co2AvoidedTons', 'maintenanceExpense', 'utilityExpense',
+          'leaseExpense', 'otherExpenses', 'totalExpenses', 'expenseNotes',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == recordId
+        && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && isValidMonth(data.month)
+        && isValidId(data.plantId)
+        && data.generatedKwh is number && data.generatedKwh >= 0
+        && data.expectedKwh is number && data.expectedKwh >= 0
+        && data.compensatedKwh is number && data.compensatedKwh >= 0
+        && data.performanceRatioPct is number && data.performanceRatioPct >= 0 && data.performanceRatioPct <= 200
+        && data.availabilityPct is number && data.availabilityPct >= 0 && data.availabilityPct <= 100
+        && data.co2AvoidedTons is number && data.co2AvoidedTons >= 0
+        && data.maintenanceExpense is number && data.maintenanceExpense >= 0
+        && data.utilityExpense is number && data.utilityExpense >= 0
+        && data.leaseExpense is number && data.leaseExpense >= 0
+        && data.otherExpenses is number && data.otherExpenses >= 0
+        && data.totalExpenses is number && data.totalExpenses >= 0
+        && data.expenseNotes is string && data.expenseNotes.size() <= 300
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isVerifiedUser()
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isVerifiedUser()
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'updatedAt']);
+      allow delete: if false;
+
+      match /plants/{plantId} {
+        allow get: if isValidId(userId) && isValidId(plantId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(plantId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidPlant(incoming(), plantId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(plantId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidPlant(incoming(), plantId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'code', 'name', 'ucNumber', 'city', 'state', 'capacityKwp',
+            'inverterModel', 'inverterCount', 'panelCount', 'tariffPerKwh',
+            'commissionedAt', 'status', 'imageUrl', 'monthlyTargetKwh', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(plantId) && isOwner(userId) && isVerifiedUser();
+      }
+
+      match /sellers/{sellerId} {
+        allow get: if isValidId(userId) && isValidId(sellerId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(sellerId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidSeller(incoming(), sellerId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(sellerId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidSeller(incoming(), sellerId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'document', 'email', 'phone', 'region',
+            'defaultCommissionPct', 'pixKey', 'joinedAt', 'status', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(sellerId) && isOwner(userId) && isVerifiedUser();
+      }
+
+      match /clients/{clientId} {
+        allow get: if isValidId(userId) && isValidId(clientId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(clientId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidClient(incoming(), clientId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(clientId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidClient(incoming(), clientId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'document', 'email', 'phone', 'city', 'ucNumber',
+            'plantId', 'contractedKwh', 'discountPct', 'fixedDiscountBrl', 'sellerId',
+            'commissionPct', 'contractStartDate', 'status', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(clientId) && isOwner(userId) && isVerifiedUser();
+      }
+
+      match /consumptions/{consumptionId} {
+        allow get: if isValidId(userId) && isValidId(consumptionId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(consumptionId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidConsumption(incoming(), consumptionId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && (
+            exists(/databases/$(database)/documents/users/$(userId)/clients/$(incoming().clientId))
+            || existsAfter(/databases/$(database)/documents/users/$(userId)/clients/$(incoming().clientId))
+          );
+        allow update: if isValidId(userId) && isValidId(consumptionId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidConsumption(incoming(), consumptionId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().clientId == existing().clientId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'month', 'consumedKwh', 'compensatedKwh',
+            'gridCostWithoutSolar', 'billedAmount', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(consumptionId) && isOwner(userId) && isVerifiedUser();
+      }
+
+      match /invoices/{invoiceId} {
+        allow get: if isValidId(userId) && isValidId(invoiceId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(invoiceId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidInvoice(incoming(), invoiceId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(invoiceId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidInvoice(incoming(), invoiceId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && existing().status != 'paga'
+          && (
+            (incoming().status == 'paga' && incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'paidAt', 'paymentMethod', 'receiptNumber', 'updatedAt'
+            ]))
+            || (incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'dueDate', 'kwhCompensated', 'grossAmount',
+              'discountAmount', 'netAmount', 'commissionAmount', 'updatedAt'
+            ]))
+          );
+        allow delete: if isValidId(userId) && isValidId(invoiceId) && isOwner(userId) && isVerifiedUser();
+      }
+
+      match /monthlyPerformance/{recordId} {
+        allow get: if isValidId(userId) && isValidId(recordId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(recordId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidMonthlyPerformance(incoming(), recordId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && (
+            exists(/databases/$(database)/documents/users/$(userId)/plants/$(incoming().plantId))
+            || existsAfter(/databases/$(database)/documents/users/$(userId)/plants/$(incoming().plantId))
+          );
+        allow update: if isValidId(userId) && isValidId(recordId)
+          && isOwner(userId)
+          && isVerifiedUser()
+          && isValidMonthlyPerformance(incoming(), recordId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().plantId == existing().plantId
+          && incoming().month == existing().month
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'generatedKwh', 'expectedKwh', 'compensatedKwh',
+            'performanceRatioPct', 'availabilityPct', 'co2AvoidedTons',
+            'maintenanceExpense', 'utilityExpense', 'leaseExpense',
+            'otherExpenses', 'totalExpenses', 'expenseNotes', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(recordId) && isOwner(userId) && isVerifiedUser();
+      }
+    }
+  }
+}
